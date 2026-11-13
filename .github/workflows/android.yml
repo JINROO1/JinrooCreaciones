@@ -17,7 +17,7 @@ jobs:
       - name: Install SDK components
         run: |
           set +e
-          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1' > sdk.log 2>&1
+          "${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1' > sdk.log 2>&1
           code=$?
           cat sdk.log
           if [ "$code" -ne 0 ]; then
