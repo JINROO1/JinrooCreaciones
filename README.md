@@ -41,3 +41,7 @@ El flujo `.github/workflows/android.yml` instala el SDK, ejecuta `testDebugUnitT
 ## Juego objetivo
 
 El objetivo elegido es **Monster Hunter Outlanders**, pero el prototipo aún no reconoce su interfaz ni ejecuta una política de juego. No hay capturas del dispositivo, etiquetas de acciones, modelo entrenado ni validación sobre el juego. Para construir una política real hacen falta datos representativos (incluidos cambios de interfaz, cámara y combate), un método de entrenamiento y pruebas controladas en el dispositivo; una sola salida de toque tampoco cubre controles simultáneos o gestos sostenidos. No se promete compatibilidad ni evasión de sistemas del juego.
+
+## Preparación de datos
+
+La herramienta local `tools/prepare_dataset.py` prepara fotogramas y etiquetas a partir de vídeos con acciones sincronizadas proporcionados y autorizados por el usuario. No descarga datos ni entrena un modelo. Consulte [preparación de datos](docs/preparacion-datos.md) para el formato, las pruebas y sus limitaciones.

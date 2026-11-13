@@ -6,3 +6,7 @@ local.properties
 *.jks
 *.keystore
 app/src/main/assets/model.onnx
+# Local recordings and extracted datasets may contain sensitive gameplay data.
+/data/
+__pycache__/
+*.py[cod]

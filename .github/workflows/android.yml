@@ -25,6 +25,8 @@ jobs:
             echo "::error::SDK installation failed: $message"
             exit "$code"
           fi
+      - name: Test dataset preparation
+        run: python3 -m unittest discover -s tests -v
       - name: Run tests and build debug APK
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - name: Upload prototype (no model included)
