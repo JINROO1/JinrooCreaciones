@@ -17,7 +17,20 @@ Archivo UTF-8 JSON Lines, un objeto por línea, en orden de `time_s` estrictamen
 {"time_s":3.0,"action":"wait","duration_ms":500}
 ```
 
-Solo se admiten esas cuatro clases y campos. El formato **no admite acciones simultáneas**, trayectorias intermedias, presión ni etiquetado multitoque; se rechazan campos adicionales en vez de descartarlos silenciosamente. No es suficiente para reproducir controles complejos. El timestamp selecciona el primer fotograma que FFmpeg puede extraer tras la posición solicitada; no garantiza que preceda al toque, ni sincronización de fotograma exacta con vídeos de tasa variable. Valide el desfase y el contenido de los fotogramas manualmente antes de entrenar.
+El formato simple admite solo esas cuatro clases y campos. No admite acciones simultáneas ni trayectorias intermedias; se rechazan campos adicionales en vez de descartarlos silenciosamente. El timestamp selecciona el primer fotograma que FFmpeg puede extraer tras la posición solicitada; no garantiza que preceda al toque, ni sincronización de fotograma exacta con vídeos de tasa variable. Valide el desfase y el contenido de los fotogramas manualmente antes de entrenar.
+
+## Formato multitáctil (esquema 2)
+
+Como alternativa, un archivo puede contener exclusivamente eventos `touch_frame`, cada uno con una o varias **transiciones** simultáneas. Los IDs van de 0 a 9 y cada dedo debe seguir la secuencia `down`, cero o más `move` y `up`. Un dedo permanece activo entre eventos aunque no aparezca en el siguiente; solo se incluyen los dedos que cambiaron de estado o posición. El archivo debe terminar con todos los dedos liberados. Ejemplo sintético:
+
+```jsonl
+{"time_s":0.10,"action":"touch_frame","contacts":[{"id":0,"state":"down","position":[0.15,0.8]}]}
+{"time_s":0.20,"action":"touch_frame","contacts":[{"id":0,"state":"move","position":[0.25,0.8]},{"id":1,"state":"down","position":[0.85,0.6]}]}
+{"time_s":0.30,"action":"touch_frame","contacts":[{"id":1,"state":"up","position":[0.85,0.6]}]}
+{"time_s":0.50,"action":"touch_frame","contacts":[{"id":0,"state":"up","position":[0.25,0.8]}]}
+```
+
+Cada línea es un instante común; agrupe las transiciones de la misma marca temporal en `contacts`, ya que los tiempos deben ser estrictamente crecientes. No mezcle eventos simples y `touch_frame` en un archivo. Las posiciones son normalizadas y se conserva cada transición; el formato no registra presión, trayectoria entre muestras, orientación, orden sub-fotograma ni sincronización física precisa. Un vídeo y una secuencia anotada deben compartir el mismo origen temporal y orientación. No se captura ni reproduce ningún toque en Android con este formato. `metadata.json` identifica el esquema como versión 2.
 
 ## Ejecución
 
@@ -40,4 +53,4 @@ La salida es un **formato de intercambio**, no un modelo ONNX ni una entrada dir
 python3 -m unittest discover -s tests -v
 ```
 
-Las pruebas unitarias simulan FFmpeg; se realizó además una prueba de extracción con un vídeo sintético y FFmpeg real en el entorno de desarrollo. No se ha probado con material del juego.
+Las pruebas unitarias simulan FFmpeg; se realizó además una prueba de extracción con un vídeo sintético y FFmpeg real en el entorno de desarrollo. Las pruebas también cubren secuencias multitáctiles y sus transiciones inválidas. No se ha probado con material del juego.

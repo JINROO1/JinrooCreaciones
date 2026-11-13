@@ -10,7 +10,8 @@ import shutil
 import subprocess
 import tempfile
 
-ACTIONS = {"tap", "swipe", "hold", "wait"}
+ACTIONS = {"tap", "swipe", "hold", "wait", "touch_frame"}
+MAX_CONTACTS = 10
 MAX_SAMPLES = 100_000
 
 
@@ -31,7 +32,29 @@ def validate_event(raw):
         raise ValueError("cada línea debe contener un objeto JSON")
     action = raw.get('action')
     if not isinstance(action, str) or action not in ACTIONS:
-        raise ValueError("acción desconocida; use tap, swipe, hold o wait")
+        raise ValueError("acción desconocida; use tap, swipe, hold, wait o touch_frame")
+    if action == 'touch_frame':
+        if set(raw) != {'time_s', 'action', 'contacts'}:
+            raise ValueError('touch_frame requiere únicamente time_s, action y contacts')
+        contacts = raw['contacts']
+        if not isinstance(contacts, list) or not 1 <= len(contacts) <= MAX_CONTACTS:
+            raise ValueError(f'contacts debe contener entre 1 y {MAX_CONTACTS} entradas')
+        parsed = []
+        ids = set()
+        for contact in contacts:
+            if not isinstance(contact, dict) or set(contact) != {'id', 'state', 'position'}:
+                raise ValueError('cada contacto requiere id, state y position')
+            finger = contact['id']
+            state = contact['state']
+            if isinstance(finger, bool) or not isinstance(finger, int) or not 0 <= finger < MAX_CONTACTS:
+                raise ValueError('id debe ser un entero entre 0 y 9')
+            if finger in ids:
+                raise ValueError('id duplicado en el mismo instante')
+            ids.add(finger)
+            if not isinstance(state, str) or state not in {'down', 'move', 'up'}:
+                raise ValueError('state debe ser down, move o up')
+            parsed.append({'id': finger, 'state': state, 'position': point(contact['position'], 'position')})
+        return {'time_s': number(raw.get('time_s'), 'time_s', 0, 86400), 'action': action, 'contacts': parsed}
     allowed = {'time_s', 'action', 'duration_ms'}
     if action in {'tap', 'hold', 'swipe'}:
         allowed.add('start')
@@ -55,6 +78,8 @@ def validate_event(raw):
 
 def load_events(path):
     events = []
+    active = set()
+    is_touch_sequence = None
     with path.open(encoding='utf-8') as stream:
         for line_no, line in enumerate(stream, 1):
             if not line.strip():
@@ -63,6 +88,23 @@ def load_events(path):
                 e = validate_event(json.loads(line))
                 if events and e['time_s'] <= events[-1]['time_s']:
                     raise ValueError('los tiempos deben ser estrictamente crecientes')
+                is_touch = e['action'] == 'touch_frame'
+                if is_touch_sequence is None:
+                    is_touch_sequence = is_touch
+                elif is_touch_sequence != is_touch:
+                    raise ValueError('no se pueden mezclar touch_frame y acciones simples')
+                if is_touch:
+                    for contact in e['contacts']:
+                        finger, state = contact['id'], contact['state']
+                        if state == 'down':
+                            if finger in active:
+                                raise ValueError(f'down duplicado para id {finger}')
+                            active.add(finger)
+                        else:
+                            if finger not in active:
+                                raise ValueError(f'{state} sin down previo para id {finger}')
+                            if state == 'up':
+                                active.remove(finger)
             except (ValueError, json.JSONDecodeError) as exc:
                 raise ValueError(f'{path.name}, línea {line_no}: {exc}') from exc
             events.append(e)
@@ -70,6 +112,8 @@ def load_events(path):
                 raise ValueError('demasiados eventos')
     if not events:
         raise ValueError('no hay eventos')
+    if active:
+        raise ValueError(f'faltan eventos up para ids: {sorted(active)}')
     return events
 
 
@@ -113,7 +157,7 @@ def prepare(video, annotations, output, session, rights, ffmpeg='ffmpeg', split=
                     msg = proc.stderr.decode('utf-8', 'replace')[-1000:]
                     raise ValueError(f'falló la extracción en {event["time_s"]} s: {msg}')
                 dest.write(json.dumps({'image': rel, 'event': event}, ensure_ascii=False, allow_nan=False) + '\n')
-        meta = {'schema_version': 1, 'session': session, 'video_sha256': digest,
+        meta = {'schema_version': 2 if events[0]['action'] == 'touch_frame' else 1, 'session': session, 'video_sha256': digest,
                 'annotations_sha256': sha256(annotations), 'split': split, 'rights': rights,
                 'sample_count': len(events), 'coordinate_system': 'normalized [0,1], origin top-left'}
         (temp / 'metadata.json').write_text(json.dumps(meta, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
