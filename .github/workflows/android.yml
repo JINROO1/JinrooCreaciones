@@ -15,7 +15,16 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Install SDK components
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
+        run: |
+          set +e
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1' > sdk.log 2>&1
+          code=$?
+          cat sdk.log
+          if [ "$code" -ne 0 ]; then
+            message=$(tail -c 3000 sdk.log | tr '\n' ' ' | sed 's/%/%25/g; s//%0D/g')
+            echo "::error::SDK installation failed: $message"
+            exit "$code"
+          fi
       - name: Run tests and build debug APK
         run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - name: Upload prototype (no model included)
