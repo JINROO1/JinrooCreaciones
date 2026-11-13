@@ -21,7 +21,7 @@ jobs:
           code=$?
           cat sdk.log
           if [ "$code" -ne 0 ]; then
-            message=$(tail -c 3000 sdk.log | tr '\n' ' ' | sed 's/%/%25/g; s//%0D/g')
+            message=$(tail -c 3000 sdk.log | tr '\n' ' ' | tr -d '\r' | sed 's/%/%25/g')
             echo "::error::SDK installation failed: $message"
             exit "$code"
           fi
