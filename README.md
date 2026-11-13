@@ -36,4 +36,8 @@ adb install -r app-release-signed.apk
 
 ## Comprobación automatizada
 
-El flujo `.github/workflows/android.yml` instala el SDK, ejecuta `testDebugUnitTest` y compila un APK de depuración en GitHub Actions. El artefacto se llama `jinroo-prototype-debug-no-model`: no contiene modelo, porque este está excluido de Git, y **no es un agente funcional para juegos**. El flujo solo se ejecutará cuando se publique la rama o se lance manualmente; todavía no ha sido ejecutado ni verificado. Las pruebas unitarias cubren la validación y conversión de coordenadas, no el comportamiento del dispositivo, la captura ni la inferencia real.
+El flujo `.github/workflows/android.yml` instala el SDK, ejecuta `testDebugUnitTest` y compila un APK de depuración en GitHub Actions. El artefacto se llama `jinroo-prototype-debug-no-model`: no contiene modelo, porque este está excluido de Git, y **no es un agente funcional para juegos**. La ejecución de GitHub Actions 43446725426 compiló el APK de depuración y pasó las pruebas unitarias; no se ha probado en un dispositivo. Las pruebas unitarias cubren la validación y conversión de coordenadas, no el comportamiento del dispositivo, la captura ni la inferencia real.
+
+## Juego objetivo
+
+El objetivo elegido es **Monster Hunter Outlanders**, pero el prototipo aún no reconoce su interfaz ni ejecuta una política de juego. No hay capturas del dispositivo, etiquetas de acciones, modelo entrenado ni validación sobre el juego. Para construir una política real hacen falta datos representativos (incluidos cambios de interfaz, cámara y combate), un método de entrenamiento y pruebas controladas en el dispositivo; una sola salida de toque tampoco cubre controles simultáneos o gestos sostenidos. No se promete compatibilidad ni evasión de sistemas del juego.
